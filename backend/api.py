@@ -1,22 +1,17 @@
 """
-api.py — FastAPI endpoint for clinical trial RAG pipeline.
+api.py — FastAPI entrypoint for Curexity backend.
 
-Flow:
-  POST /userquery
-    → PICOT intent extraction
-    → BGE-M3 embed + ES kNN retrieval
-    → BGE reranker
-    → trial-level enrichment + LLM summaries
-    → return retrieved chunks and final cards
+Keeps the existing clinical trial RAG pipeline intact and mounts auth routes
+as a separate router.
 """
 import logging
 import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import Request
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -29,6 +24,9 @@ from reranker_integrater import (
     create_openai_client_from_env,
     safe_resolve_model_id,
 )
+
+from auth.router import router as auth_router
+from core.config import settings
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -45,28 +43,59 @@ async def lifespan(app: FastAPI):
     _state["es"] = build_es()
     _state["model"] = load_model()
 
-    log.info("Loading reranker and OpenAI-compatible client...")
+    log.info("Loading reranker...")
     _state["reranker"] = BGEReranker(device=os.getenv("RERANKER_DEVICE", "cpu"))
-    _state["openai_client"] = create_openai_client_from_env()
-    _state["default_openai_model"] = safe_resolve_model_id(
-        _state["openai_client"],
-        fallback=DEFAULT_OPENAI_MODEL,
-    )
+
+    _state["openai_client"] = None
+    _state["default_openai_model"] = None
+
+    try:
+        log.info("Loading OpenAI-compatible client...")
+        _state["openai_client"] = create_openai_client_from_env()
+        _state["default_openai_model"] = safe_resolve_model_id(
+            _state["openai_client"],
+            fallback=DEFAULT_OPENAI_MODEL,
+        )
+        log.info(
+            "OpenAI-compatible client ready. model=%s",
+            _state["default_openai_model"],
+        )
+    except Exception as exc:
+        log.exception("OpenAI client initialization failed: %s", exc)
 
     _state["trial_index"] = os.getenv("ES_INDEX")
     if not _state["trial_index"]:
         raise RuntimeError("ES_INDEX env var is required for trial-level enrichment.")
 
     log.info(
-        "Startup ready. trial_index=%s model=%s",
+        "Startup ready. trial_index=%s model=%s users_index=%s",
         _state["trial_index"],
         _state["default_openai_model"],
+        settings.es_users_index,
     )
     yield
     _state.clear()
 
 
 app = FastAPI(title="Clinical Trial RAG API", lifespan=lifespan)
+
+allowed_origins = list(
+    {
+        settings.frontend_origin,
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    }
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 
 class QueryRequest(BaseModel):
@@ -97,6 +126,7 @@ class QueryResponse(BaseModel):
     card_count: int
     cards: list[dict]
 
+
 @app.get("/health")
 def health(request: Request):
     client_host = request.client.host if request.client else "unknown"
@@ -119,7 +149,9 @@ def health(request: Request):
         "origin": origin,
         "referer": referer,
         "trial_index": _state.get("trial_index"),
+        "users_index": settings.es_users_index,
         "default_openai_model": _state.get("default_openai_model"),
+        "openai_ready": _state.get("openai_client") is not None,
     }
 
 
@@ -133,8 +165,13 @@ def user_query(req: QueryRequest):
         raise HTTPException(status_code=400, detail="rerank_top_k must be > 0")
 
     try:
-        log.info("Entered /userquery query=%r candidates=%d rerank_top_k=%d include_cards=%s",
-                 req.query[:200], req.candidates, req.rerank_top_k, req.include_cards)
+        log.info(
+            "Entered /userquery query=%r candidates=%d rerank_top_k=%d include_cards=%s",
+            req.query[:200],
+            req.candidates,
+            req.rerank_top_k,
+            req.include_cards,
+        )
 
         log.info("Step 1/4: extracting PICOT intent")
         raw_intent = run_intent_elicitation_pipeline(req.query)
@@ -167,10 +204,14 @@ def user_query(req: QueryRequest):
 
         cards = []
         if req.include_cards and reranked_chunks:
+            if not _state.get("openai_client"):
+                raise HTTPException(
+                    status_code=503,
+                    detail="OpenAI-compatible client is not available. Check OPENAI_API_BASE / OPENAI_API_KEY.",
+                )
+
             log.info("Step 4/4: building trial cards")
-            selected_model = (
-                DEFAULT_OPENAI_MODEL
-            )
+            selected_model = DEFAULT_OPENAI_MODEL
             log.info("Using model=%s for card summaries", selected_model)
 
             cards = build_trial_cards(
