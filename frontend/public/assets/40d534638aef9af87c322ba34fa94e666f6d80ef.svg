@@ -1,0 +1,15 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon" clip-path="url(#clip0_598_306)">
+<path id="Vector" d="M12.0009 0.738688C12.9249 0.738688 13.8089 1.10802 14.4689 1.76802L22.2329 9.53202C22.8929 10.192 23.2622 11.076 23.2622 12C23.2622 12.924 22.8929 13.808 22.2329 14.468L14.4689 22.232C13.8089 22.892 12.9249 23.2614 12.0009 23.2614C11.0769 23.2614 10.1929 22.892 9.53292 22.232L1.76892 14.468C1.10892 13.808 0.739583 12.924 0.739583 12C0.739583 11.076 1.10892 10.192 1.76892 9.53202L9.53292 1.76802C10.1929 1.10802 11.0769 0.738688 12.0009 0.738688Z" fill="url(#paint0_linear_598_306)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_598_306" x1="12.0009" y1="0.738688" x2="12.0009" y2="23.2614" gradientUnits="userSpaceOnUse">
+<stop stop-color="#7DC4F0" stop-opacity="0.8"/>
+<stop offset="0.5" stop-color="#7DC4F0" stop-opacity="0.4"/>
+<stop offset="1" stop-color="#7DC4F0" stop-opacity="0.1"/>
+</linearGradient>
+<clipPath id="clip0_598_306">
+<rect width="24" height="24" fill="white"/>
+</clipPath>
+</defs>
+</svg>
