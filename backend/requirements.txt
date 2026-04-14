@@ -26,3 +26,6 @@ torch
 transformers
 sentence-transformers
 numpy
+python-jose[cryptography]
+passlib[bcrypt]
+email-validator
