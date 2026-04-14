@@ -4,6 +4,7 @@ export type AuthUser = {
   user_id: string;
   email: string;
   full_name: string;
+  avatar_url: string | null;
   email_verified: boolean;
   auth_provider: string;
   role: string;
@@ -14,6 +15,7 @@ export type AuthUser = {
   daily_message_used: number;
   daily_message_reset_at: string;
   last_login_at: string | null;
+  last_login_ip: string | null;
   created_at: string;
   updated_at: string;
 };

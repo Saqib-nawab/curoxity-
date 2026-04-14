@@ -49,6 +49,7 @@ class AuthService:
             user_id=hit["_id"],
             email=source["email"],
             full_name=source.get("full_name", ""),
+            avatar_url=source.get("avatar_url"),
             email_verified=bool(source.get("email_verified", False)),
             auth_provider=source.get("auth_provider", "password"),
             role=source.get("role", "user"),
@@ -59,6 +60,7 @@ class AuthService:
             daily_message_used=int(source.get("daily_message_used", 0)),
             daily_message_reset_at=source["daily_message_reset_at"],
             last_login_at=source.get("last_login_at"),
+            last_login_ip=source.get("last_login_ip"),
             created_at=source["created_at"],
             updated_at=source["updated_at"],
         )

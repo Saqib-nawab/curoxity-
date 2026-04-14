@@ -18,6 +18,7 @@ class UserPublic(BaseModel):
     user_id: str
     email: EmailStr
     full_name: str
+    avatar_url: str | None = None
     email_verified: bool
     auth_provider: str
     role: str
@@ -28,6 +29,7 @@ class UserPublic(BaseModel):
     daily_message_used: int
     daily_message_reset_at: datetime
     last_login_at: datetime | None = None
+    last_login_ip: str | None = None
     created_at: datetime
     updated_at: datetime
 

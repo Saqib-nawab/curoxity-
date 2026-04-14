@@ -110,6 +110,14 @@ export default function Navbar() {
             <span className="hidden md:inline text-sm font-medium text-text-primary">
               Hi, {firstName}
             </span>
+
+            <button
+              onClick={() => router.push('/profile')}
+              className="bg-white/60 backdrop-blur-md border border-white px-5 py-2.5 rounded-2xl font-noto-sans text-text-primary hover:bg-white/80 transition-all font-medium shadow-sm"
+            >
+              Profile
+            </button>
+
             <button
               onClick={handleSignOut}
               className="bg-white/60 backdrop-blur-md border border-white px-6 py-2.5 rounded-2xl font-noto-sans text-text-primary hover:bg-white/80 transition-all font-medium shadow-sm"
